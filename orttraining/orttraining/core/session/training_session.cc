@@ -487,14 +487,11 @@ Status TrainingSession::AddGistEncoding() {
 Status TrainingSession::AddMemorySwap(int min_topo_distance) {
   Graph& graph = model_->MainGraph();
 
-  // apply all default transformers in inference session
-  // the same as in max_num_graph_transformation_steps in core/framework/session_options.h
+  // apply default transformers in inference session, same as in core/framework/session_options.h
+  // this is required to make sure mem swap nodes are instead in the right place in final graph.
+  // 10 is the same as in max_num_graph_transformation_steps in core/framework/session_options.h
   onnxruntime::GraphTransformerManager default_graph_transformation_mgr{10};
-  for (int i = static_cast<int>(TransformerLevel::Level1); i <= static_cast<int>(TransformerLevel::MaxLevel); i++) {
-    auto transformer_level = static_cast<TransformerLevel>(i);
-    InferenceSession::AddPredefinedTransformers(default_graph_transformation_mgr, transformer_level, {});
-    ORT_RETURN_IF_ERROR(default_graph_transformation_mgr.ApplyTransformers(graph, transformer_level, *session_logger_));
-  }
+  AddPredefinedTransformers(default_graph_transformation_mgr, TransformerLevel::Level2, {});
   graph.Resolve();
 
   // then apply mem swap transformers
